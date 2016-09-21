@@ -232,7 +232,7 @@ function toggleFullScreen(editor) {
  * Action for toggling bold.
  */
 function toggleBold(editor) {
-	_toggleBlock(editor, "bold", editor.options.blockStyles.bold);
+	_toggleBlock(editor, editor.options.blockStyles.bold);
 }
 
 
@@ -240,7 +240,7 @@ function toggleBold(editor) {
  * Action for toggling italic.
  */
 function toggleItalic(editor) {
-	_toggleBlock(editor, "italic", editor.options.blockStyles.italic);
+	_toggleBlock(editor, editor.options.blockStyles.italic);
 }
 
 
@@ -248,7 +248,7 @@ function toggleItalic(editor) {
  * Action for toggling strikethrough.
  */
 function toggleStrikethrough(editor) {
-	_toggleBlock(editor, "strikethrough", "~~");
+	_toggleBlock(editor, editor.options.blockStyles.strikeThrough);
 }
 
 /**
@@ -930,72 +930,67 @@ function _toggleLine(cm, name) {
 	cm.focus();
 }
 
-function _toggleBlock(editor, type, start_chars, end_chars) {
-	if(/editor-preview-active/.test(editor.codemirror.getWrapperElement().lastChild.className))
+function _toggleBlock(editor, blockStyles) {
+	if(/editor-preview-active/.test(editor.codemirror.getWrapperElement().lastChild.className)) {
 		return;
-
-	end_chars = (typeof end_chars === "undefined") ? start_chars : end_chars;
-	var cm = editor.codemirror;
-	var stat = getState(cm);
-
-	var text;
-	var start = start_chars;
-	var end = end_chars;
-
-	var startPoint = cm.getCursor("start");
-	var endPoint = cm.getCursor("end");
-
-	if(stat[type]) {
-		text = cm.getLine(startPoint.line);
-		start = text.slice(0, startPoint.ch);
-		end = text.slice(startPoint.ch);
-		if(type == "bold") {
-			start = start.replace(/(\*\*|__)(?![\s\S]*(\*\*|__))/, "");
-			end = end.replace(/(\*\*|__)/, "");
-		} else if(type == "italic") {
-			start = start.replace(/(\*|_)(?![\s\S]*(\*|_))/, "");
-			end = end.replace(/(\*|_)/, "");
-		} else if(type == "strikethrough") {
-			start = start.replace(/(\*\*|~~)(?![\s\S]*(\*\*|~~))/, "");
-			end = end.replace(/(\*\*|~~)/, "");
-		}
-		cm.replaceRange(start + end, {
-			line: startPoint.line,
-			ch: 0
-		}, {
-			line: startPoint.line,
-			ch: 99999999999999
-		});
-
-		if(type == "bold" || type == "strikethrough") {
-			startPoint.ch -= 2;
-			if(startPoint !== endPoint) {
-				endPoint.ch -= 2;
-			}
-		} else if(type == "italic") {
-			startPoint.ch -= 1;
-			if(startPoint !== endPoint) {
-				endPoint.ch -= 1;
-			}
-		}
-	} else {
-		text = cm.getSelection();
-		if(type == "bold") {
-			text = text.split("**").join("");
-			text = text.split("__").join("");
-		} else if(type == "italic") {
-			text = text.split("*").join("");
-			text = text.split("_").join("");
-		} else if(type == "strikethrough") {
-			text = text.split("~~").join("");
-		}
-		cm.replaceSelection(start + text + end);
-
-		startPoint.ch += start_chars.length;
-		endPoint.ch = startPoint.ch + text.length;
 	}
 
-	cm.setSelection(startPoint, endPoint);
+	var cm = editor.codemirror;
+
+	var startPoint = cm.getCursor("start");
+	var startLine = cm.getLine(startPoint.line);
+	var endPoint = cm.getCursor("end");
+	var endLine = cm.getLine(endPoint.line);
+	var selection = cm.getSelection();
+
+	var toggleOff = true;
+	var startSearch = startPoint.ch - blockStyles.length;
+	var endSearch = endPoint.ch;
+
+	var startChar;
+	var counter = 0;
+	var endChar;
+	while (toggleOff && counter < blockStyles.length) {
+		startChar = startLine[startSearch];
+		endChar = endLine[endSearch];
+		if (startChar !== blockStyles[counter] || endChar !== blockStyles[counter]) {
+			toggleOff = false;
+		}
+
+		counter++;
+		startSearch++;
+		endSearch++;
+	}
+
+	var content, rangeStartPoint, rangeEndPoint;
+	if (toggleOff) {
+		rangeStartPoint = {
+			ch: startPoint.ch - blockStyles.length,
+			line: startPoint.line,
+		};
+		rangeEndPoint = {
+			ch: endPoint.ch + blockStyles.length,
+			line: endPoint.line,
+		};
+		content = selection;
+	} else {
+		content = blockStyles + selection + blockStyles;
+		rangeStartPoint = startPoint;
+		rangeEndPoint = endPoint;
+	}
+
+	cm.replaceRange(content, rangeStartPoint, rangeEndPoint);
+
+	var selectionStartPoint = Object.assign({}, rangeStartPoint);
+	var selectionEndPoint = Object.assign({}, rangeEndPoint);
+
+	if (!toggleOff) {
+		selectionStartPoint.ch += blockStyles.length;
+		selectionEndPoint.ch += (selectionStartPoint.line !== selectionEndPoint.line ? 0 : blockStyles.length);
+	} else {
+		selectionEndPoint.ch -= blockStyles.length * (selectionStartPoint.line !== selectionEndPoint.line ? 1 : 2);
+	}
+	cm.setSelection(selectionStartPoint, selectionEndPoint);
 	cm.focus();
 }
 
@@ -1254,9 +1249,10 @@ var promptTexts = {
 };
 
 var blockStyles = {
-	"bold": "**",
-	"code": "```",
-	"italic": "*"
+	bold: "**",
+	code: "```",
+	italic: "*",
+	strikeThrough: "~~",
 };
 
 /**
