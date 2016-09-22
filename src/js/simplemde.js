@@ -894,10 +894,10 @@ function _toggleHeading(cm, direction, size) {
 
 
 function _toggleLine(cm, name) {
-	if(/editor-preview-active/.test(cm.getWrapperElement().lastChild.className))
+	if(/editor-preview-active/.test(cm.getWrapperElement().lastChild.className)) {
 		return;
+	}
 
-	var stat = getState(cm);
 	var startPoint = cm.getCursor("start");
 	var endPoint = cm.getCursor("end");
 	var repl = {
@@ -913,7 +913,7 @@ function _toggleLine(cm, name) {
 	for(var i = startPoint.line; i <= endPoint.line; i++) {
 		(function(i) {
 			var text = cm.getLine(i);
-			if(stat[name]) {
+			if(text.indexOf(map[name]) === 0) {
 				text = text.replace(repl[name], "$1");
 			} else {
 				text = map[name] + text;
