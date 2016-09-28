@@ -706,7 +706,7 @@ function toggleSideBySide(editor) {
 		// give some time for the transition from editor.css to fire and the view to slide from right to left,
 		// instead of just appearing.
 		setTimeout(function() {
-			if(!cm.getOption("fullScreen"))
+			if(!cm.getOption("fullScreen") && !editor.options.preventFullScreen)
 				toggleFullScreen(editor);
 			preview.className += " editor-preview-active-side";
 		}, 1);
