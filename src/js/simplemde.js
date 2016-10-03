@@ -1445,6 +1445,12 @@ SimpleMDE.prototype.render = function(el) {
 		}
 	}
 
+	for (var shortcutKey in options.inverseShortcuts) {
+		keyMaps[fixShortcut(shortcutKey)] = function() {
+			options.inverseShortcuts[shortcutKey]();
+		};
+	}
+
 	keyMaps["Enter"] = "newlineAndIndentContinueMarkdownList";
 	keyMaps["Tab"] = "tabAndIndentMarkdownList";
 	keyMaps["Shift-Tab"] = "shiftTabAndUnindentMarkdownList";
